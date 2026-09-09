@@ -24,9 +24,13 @@ def compute_bet_outcome(bet):
 
     Mirrors standard sportsbook parlay rules: any losing leg loses the whole
     bet; push legs are dropped and odds recombined over the remaining legs;
-    if every leg pushes, the whole bet pushes (stake returned).
+    if every leg pushes, the whole bet pushes (stake returned). A win pays
+    out bet.to_win_override when set -- sportsbook boosts/promos don't
+    follow plain odds math, so a manually-entered real payout takes
+    precedence over the odds-derived estimate.
     """
     risk = Decimal(bet.risk_amount)
+    override = bet.to_win_override
 
     if not bet.is_parlay:
         leg = bet.legs[0]
@@ -36,6 +40,8 @@ def compute_bet_outcome(bet):
             return "loss", money(-risk)
         if leg.result == "push":
             return "push", money(0)
+        if override is not None:
+            return "win", money(override)
         decimal_odds = american_to_decimal(leg.odds)
         return "win", money(risk * (decimal_odds - 1))
 
@@ -48,6 +54,9 @@ def compute_bet_outcome(bet):
     winning_legs = [leg for leg in bet.legs if leg.result == "win"]
     if not winning_legs:
         return "push", money(0)
+
+    if override is not None:
+        return "win", money(override)
 
     combined = combined_decimal_odds(leg.odds for leg in winning_legs)
     return "win", money(risk * (combined - 1))

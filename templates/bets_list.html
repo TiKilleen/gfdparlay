@@ -30,7 +30,9 @@
       <td class="{{ 'win' if bet.profit and bet.profit > 0 else ('loss' if bet.profit and bet.profit < 0 else '') }}">
         {{ bet.profit|money }}
       </td>
-      <td class="{{ bet.result }}">{{ bet.result }}</td>
+      <td class="{{ bet.result }}">
+        {{ bet.result }}{% if bet.result == "pending" %} &middot; <span style="color: var(--accent)">grade &rarr;</span>{% endif %}
+      </td>
     </tr>
     {% else %}
     <tr><td colspan="7" style="color: var(--muted)">No bets yet -- <a href="{{ url_for('bets_new') }}">add one</a>.</td></tr>

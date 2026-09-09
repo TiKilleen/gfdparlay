@@ -58,6 +58,12 @@ def func_lower_eq(column, value):
     return db.func.lower(column) == value.lower()
 
 
+def parse_optional_decimal(raw_value):
+    if raw_value is None or not raw_value.strip():
+        return None
+    return Decimal(raw_value)
+
+
 def register_routes(app):
     @app.get("/health")
     def health():
@@ -65,8 +71,14 @@ def register_routes(app):
 
     @app.get("/")
     def dashboard():
+        pending_bets = (
+            Bet.query.filter_by(result="pending")
+            .order_by(Bet.placed_date)
+            .all()
+        )
         return render_template(
             "dashboard.html",
+            pending_bets=pending_bets,
             group_players=analytics.player_leaderboard(is_group_bet=True),
             group_bettors=analytics.bettor_scoreboard(is_group_bet=True),
             group_categories=analytics.category_breakdown(is_group_bet=True),
@@ -109,6 +121,7 @@ def register_routes(app):
             bet_type_id = int(form["bet_type_id"])
             placed_date = date.fromisoformat(form["placed_date"])
             risk_amount = Decimal(form["risk_amount"])
+            to_win_override = parse_optional_decimal(form.get("to_win_override"))
         except (KeyError, ValueError, InvalidOperation):
             abort(400, "Missing or invalid bet fields")
 
@@ -130,6 +143,7 @@ def register_routes(app):
             risk_amount=risk_amount,
             notes=form.get("notes") or None,
             is_parlay=len(bettor_ids) > 1,
+            to_win_override=to_win_override,
         )
 
         leg_odds = []
@@ -167,6 +181,22 @@ def register_routes(app):
                 leg.result = result
 
         bet.result, bet.profit = compute_bet_outcome(bet)
+        db.session.commit()
+        return redirect(url_for("bet_detail", bet_id=bet.id))
+
+    @app.post("/bets/<int:bet_id>/override")
+    def bet_override(bet_id):
+        bet = Bet.query.get_or_404(bet_id)
+        try:
+            bet.to_win_override = parse_optional_decimal(request.form.get("to_win_override"))
+        except InvalidOperation:
+            abort(400, "Invalid override amount")
+
+        # A pending bet has no result yet to recompute; a graded one needs
+        # its stored profit refreshed immediately so it reflects the new
+        # override rather than waiting for a re-grade that may never happen.
+        if bet.result != "pending":
+            bet.result, bet.profit = compute_bet_outcome(bet)
         db.session.commit()
         return redirect(url_for("bet_detail", bet_id=bet.id))
 

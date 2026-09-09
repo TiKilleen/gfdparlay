@@ -13,7 +13,15 @@
 <div class="panel">
   <table>
     <tr><th>Risk</th><td>${{ "%.2f"|format(bet.risk_amount) }}</td></tr>
-    <tr><th>Est. To Win</th><td>{{ bet.to_win_amount|money }}</td></tr>
+    <tr><th>Odds-based estimate</th><td>{{ bet.to_win_amount|money }}</td></tr>
+    <tr><th>Payout if win</th>
+      <td>
+        {% if bet.to_win_override is not none %}
+          {{ bet.to_win_override|money }} <span class="tag">override</span>
+        {% else %}
+          {{ bet.to_win_amount|money }} <span style="color: var(--muted)">(auto)</span>
+        {% endif %}
+      </td></tr>
     <tr><th>Profit</th>
       <td class="{{ 'win' if bet.profit and bet.profit > 0 else ('loss' if bet.profit and bet.profit < 0 else '') }}">
         {{ bet.profit|money }}
@@ -23,7 +31,24 @@
   {% if bet.notes %}<p>{{ bet.notes }}</p>{% endif %}
 </div>
 
-<h2>Legs</h2>
+<div class="panel">
+  <h3 style="margin-top:0">Got an odds boost or promo?</h3>
+  <p style="color: var(--muted); margin-top:-6px">
+    Enter the sportsbook's actual quoted payout here. It overrides the
+    odds-based estimate above for grading -- leave blank to go back to
+    plain odds math.
+  </p>
+  <form class="stacked" method="post" action="{{ url_for('bet_override', bet_id=bet.id) }}">
+    <label>Actual payout if win ($)</label>
+    <input type="number" step="0.01" min="0" name="to_win_override"
+           value="{{ bet.to_win_override if bet.to_win_override is not none else '' }}"
+           placeholder="Leave blank to auto-calculate">
+    <button type="submit" class="secondary">Save Payout</button>
+  </form>
+</div>
+
+<h2>Grade this bet</h2>
+<p style="color: var(--muted)">Set each leg to Win/Loss/Push once the game's final -- profit above recalculates automatically.</p>
 <form class="stacked" method="post" action="{{ url_for('bet_grade', bet_id=bet.id) }}">
   {% for leg in bet.legs %}
   <div class="leg-row">

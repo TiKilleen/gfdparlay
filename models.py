@@ -62,6 +62,11 @@ class Bet(db.Model):
     placed_date = db.Column(db.Date, nullable=False, default=date.today)
     risk_amount = db.Column(db.Numeric(10, 2), nullable=False)
     to_win_amount = db.Column(db.Numeric(10, 2), nullable=True)
+    # Sportsbooks apply odds boosts/promos that don't match straight odds
+    # math -- when set, this is what actually gets paid out on a win,
+    # overriding the odds-derived to_win_amount above (which stays intact
+    # as the "what plain math says" reference figure).
+    to_win_override = db.Column(db.Numeric(10, 2), nullable=True)
     profit = db.Column(db.Numeric(10, 2), nullable=True)
     result = db.Column(db.String(10), nullable=False, default="pending")
     notes = db.Column(db.Text, nullable=True)

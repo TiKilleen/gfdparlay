@@ -36,6 +36,10 @@
   <label>Risk / Stake ($)</label>
   <input type="number" step="0.01" min="0" name="risk_amount" required>
 
+  <label>Override total payout ($, optional)</label>
+  <input type="number" step="0.01" min="0" name="to_win_override" placeholder="Leave blank to auto-calculate from odds">
+  <p style="margin:4px 0 0; color: var(--muted); font-size: 13px">Use this when the book gives an odds boost or promo that doesn't match straight odds math -- the auto-calculated estimate still shows for comparison, but this number wins.</p>
+
   <label>Notes (optional)</label>
   <textarea name="notes"></textarea>
 
@@ -56,13 +60,15 @@
       {% endfor %}
     </select>
     <div class="leg-grid">
-      <div>
+      <div class="autocomplete-field">
         <label>Player (optional)</label>
-        <input list="player-options" name="leg_player_name" placeholder="e.g. Saquon Barkley">
+        <input name="leg_player_name" placeholder="e.g. Saquon Barkley" data-autocomplete="player" autocomplete="off">
+        <div class="autocomplete-list"></div>
       </div>
-      <div>
+      <div class="autocomplete-field">
         <label>Prop Category</label>
-        <input list="category-options" name="leg_prop_category" required placeholder="e.g. Rushing Yards by RB">
+        <input name="leg_prop_category" required placeholder="e.g. Rushing Yards by RB" data-autocomplete="category" autocomplete="off">
+        <div class="autocomplete-list"></div>
       </div>
     </div>
     <label>Description</label>
@@ -72,12 +78,11 @@
   </div>
 </template>
 
-<datalist id="player-options">
-  {% for name in player_names %}<option value="{{ name }}">{% endfor %}
-</datalist>
-<datalist id="category-options">
-  {% for name in category_names %}<option value="{{ name }}">{% endfor %}
-</datalist>
-
+<script>
+  window.AUTOCOMPLETE_OPTIONS = {
+    player: {{ player_names|tojson }},
+    category: {{ category_names|tojson }}
+  };
+</script>
 <script src="{{ url_for('static', filename='leg_form.js') }}"></script>
 {% endblock %}

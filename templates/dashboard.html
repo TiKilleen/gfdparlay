@@ -2,6 +2,19 @@
 {% block title %}Dashboard{% endblock %}
 {% block content %}
 
+{% if pending_bets %}
+<div class="panel" style="border-color: var(--accent)">
+  <h3 style="margin-top:0">Needs grading ({{ pending_bets|length }})</h3>
+  {% for bet in pending_bets %}
+  <p style="margin:6px 0">
+    <a href="{{ url_for('bet_detail', bet_id=bet.id) }}">
+      {{ bet.placed_date.strftime('%-m/%-d') }} &middot; {{ bet.sport }} {{ bet.bet_type.name }} &middot; ${{ "%.2f"|format(bet.risk_amount) }}
+    </a>
+  </p>
+  {% endfor %}
+</div>
+{% endif %}
+
 <h1>Group Parlay Analysis</h1>
 <p style="color: var(--muted)">Weekly friend-group parlays only.</p>
 
