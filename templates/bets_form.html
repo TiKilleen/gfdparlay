@@ -36,9 +36,9 @@
   <label>Risk / Stake ($)</label>
   <input type="number" step="0.01" min="0" name="risk_amount" required>
 
-  <label>Override total payout ($, optional)</label>
+  <label>Override winnings if you win ($, optional)</label>
   <input type="number" step="0.01" min="0" name="to_win_override" placeholder="Leave blank to auto-calculate from odds">
-  <p style="margin:4px 0 0; color: var(--muted); font-size: 13px">Use this when the book gives an odds boost or promo that doesn't match straight odds math -- the auto-calculated estimate still shows for comparison, but this number wins.</p>
+  <p style="margin:4px 0 0; color: var(--muted); font-size: 13px">Winnings only, not your stake back -- same as a book's "to win" figure, not its "total payout" figure. Use this when the book gives an odds boost or promo that doesn't match straight odds math; the auto-calculated estimate still shows for comparison, but this number wins.</p>
 
   <label>Notes (optional)</label>
   <textarea name="notes"></textarea>
