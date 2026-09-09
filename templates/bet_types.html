@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Bet Types{% endblock %}
+{% block content %}
+
+<h1>Bet Types</h1>
+
+<div class="panel">
+  <table>
+    <tr><th>Name</th><th>Defaults to Group Parlay?</th></tr>
+    {% for bt in bet_types %}
+    <tr><td>{{ bt.name }}</td><td>{{ 'Yes' if bt.default_is_group else 'No' }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+
+<h2>Add a bet type</h2>
+<form class="stacked" method="post" action="{{ url_for('bet_types_page') }}">
+  <label>Name</label>
+  <input name="name" required placeholder="e.g. Same Game Parlay">
+  <div class="checkbox-row">
+    <input type="checkbox" id="default-is-group" name="default_is_group">
+    <label for="default-is-group" style="margin:0">This is normally a group parlay bet type</label>
+  </div>
+  <button type="submit">Add Bet Type</button>
+</form>
+
+{% endblock %}

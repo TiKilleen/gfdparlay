@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+
+<h1>Group Parlay Analysis</h1>
+<p style="color: var(--muted)">Weekly friend-group parlays only.</p>
+
+<div class="panel">
+  <h3>Bettor Scoreboard</h3>
+  <table>
+    <tr><th>Bettor</th><th>W</th><th>L</th><th>Win%</th><th>Streak</th><th>Avg Odds</th></tr>
+    {% for row in group_bettors %}
+    <tr>
+      <td>{{ row.name }}</td>
+      <td>{{ row.wins }}</td>
+      <td>{{ row.losses }}</td>
+      <td>{{ row.win_pct if row.win_pct is not none else "-" }}%</td>
+      <td>{{ row.streak }}</td>
+      <td>{{ row.avg_odds if row.avg_odds is not none else "-" }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" style="color: var(--muted)">No graded group-parlay legs yet.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+
+<div class="panel">
+  <h3>Player Leaderboard</h3>
+  <table>
+    <tr><th>Player</th><th>W</th><th>L</th><th>Win%</th></tr>
+    {% for row in group_players %}
+    <tr>
+      <td>{{ row.name }}</td>
+      <td>{{ row.wins }}</td>
+      <td>{{ row.losses }}</td>
+      <td>{{ row.win_pct if row.win_pct is not none else "-" }}%</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" style="color: var(--muted)">No graded group-parlay legs yet.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+
+<div class="panel">
+  <h3>Prop Category Win %</h3>
+  <table>
+    <tr><th>Category</th><th>W</th><th>L</th><th>Win%</th></tr>
+    {% for row in group_categories %}
+    <tr>
+      <td>{{ row.name }}</td>
+      <td>{{ row.wins }}</td>
+      <td>{{ row.losses }}</td>
+      <td>{{ row.win_pct if row.win_pct is not none else "-" }}%</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" style="color: var(--muted)">No graded group-parlay legs yet.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+
+<h1>Solo Bet Analysis</h1>
+<p style="color: var(--muted)">Bets Tim placed on his own -- what's actually working.</p>
+
+<div class="panel">
+  <h3>ROI by Sport / Bet Type</h3>
+  <table>
+    <tr><th>Sport</th><th>Bet Type</th><th>Risk</th><th>Profit</th><th>ROI</th></tr>
+    {% for row in solo_roi %}
+    <tr>
+      <td>{{ row.sport }}</td>
+      <td>{{ row.bet_type }}</td>
+      <td>{{ row.risk|money }}</td>
+      <td class="{{ 'win' if row.profit > 0 else ('loss' if row.profit < 0 else '') }}">{{ row.profit|money }}</td>
+      <td>{{ row.roi if row.roi is not none else "-" }}%</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" style="color: var(--muted)">No graded solo bets yet.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+
+<div class="panel">
+  <h3>Solo Prop Category Win %</h3>
+  <table>
+    <tr><th>Category</th><th>W</th><th>L</th><th>Win%</th></tr>
+    {% for row in solo_categories %}
+    <tr>
+      <td>{{ row.name }}</td>
+      <td>{{ row.wins }}</td>
+      <td>{{ row.losses }}</td>
+      <td>{{ row.win_pct if row.win_pct is not none else "-" }}%</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" style="color: var(--muted)">No graded solo-bet legs yet.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+
+{% endblock %}

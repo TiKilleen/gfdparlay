@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Bettors{% endblock %}
+{% block content %}
+
+<h1>Bettors</h1>
+
+<div class="panel">
+  <table>
+    <tr><th>Name</th><th>Short Code</th></tr>
+    {% for b in bettors %}
+    <tr><td>{{ b.name }}</td><td>{{ b.short_code }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+
+<h2>Add a bettor</h2>
+<form class="stacked" method="post" action="{{ url_for('bettors_page') }}">
+  <label>Name</label>
+  <input name="name" required placeholder="e.g. Dave">
+  <label>Short Code</label>
+  <input name="short_code" required placeholder="e.g. DAVE">
+  <button type="submit">Add Bettor</button>
+</form>
+
+{% endblock %}

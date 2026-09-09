@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Bets{% endblock %}
+{% block content %}
+
+<h1>Bets</h1>
+
+<div class="filters">
+  <span>Scope:</span>
+  <a href="{{ url_for('bets_list', scope='all', status=status) }}" class="{{ 'active' if scope == 'all' }}">All</a>
+  <a href="{{ url_for('bets_list', scope='group', status=status) }}" class="{{ 'active' if scope == 'group' }}">Group Parlay</a>
+  <a href="{{ url_for('bets_list', scope='solo', status=status) }}" class="{{ 'active' if scope == 'solo' }}">Solo</a>
+</div>
+<div class="filters">
+  <span>Status:</span>
+  <a href="{{ url_for('bets_list', scope=scope, status='all') }}" class="{{ 'active' if status == 'all' }}">All</a>
+  <a href="{{ url_for('bets_list', scope=scope, status='pending') }}" class="{{ 'active' if status == 'pending' }}">Pending</a>
+  <a href="{{ url_for('bets_list', scope=scope, status='graded') }}" class="{{ 'active' if status == 'graded' }}">Graded</a>
+</div>
+
+<div class="panel">
+  <table>
+    <tr><th>Date</th><th>Sport</th><th>Type</th><th>Scope</th><th>Risk</th><th>Profit</th><th>Result</th></tr>
+    {% for bet in bets %}
+    <tr onclick="window.location='{{ url_for('bet_detail', bet_id=bet.id) }}'" style="cursor:pointer">
+      <td>{{ bet.placed_date.strftime('%-m/%-d') }}</td>
+      <td>{{ bet.sport }}</td>
+      <td>{{ bet.bet_type.name }}</td>
+      <td>{{ 'Group' if bet.is_group_bet else 'Solo' }}</td>
+      <td>${{ "%.2f"|format(bet.risk_amount) }}</td>
+      <td class="{{ 'win' if bet.profit and bet.profit > 0 else ('loss' if bet.profit and bet.profit < 0 else '') }}">
+        {{ bet.profit|money }}
+      </td>
+      <td class="{{ bet.result }}">{{ bet.result }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" style="color: var(--muted)">No bets yet -- <a href="{{ url_for('bets_new') }}">add one</a>.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+
+{% endblock %}

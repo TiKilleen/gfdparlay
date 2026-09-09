@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}New Bet{% endblock %}
+{% block content %}
+
+<h1>New Bet</h1>
+
+<form class="stacked" method="post" action="{{ url_for('bets_new') }}">
+  <label>Sport</label>
+  <input list="sport-options" name="sport" required placeholder="NFL">
+  <datalist id="sport-options">
+    <option value="NFL"><option value="NCAA"><option value="NBA"><option value="NCAAB">
+  </datalist>
+
+  <label>Bet Type</label>
+  <select id="bet-type-select" name="bet_type_id" required>
+    {% for bt in bet_types %}
+    <option value="{{ bt.id }}" data-default-group="{{ bt.default_is_group|lower }}">{{ bt.name }}</option>
+    {% endfor %}
+  </select>
+  <p style="margin:6px 0 0"><a href="{{ url_for('bet_types_page') }}" class="tag" style="text-decoration:none">+ add a new bet type</a></p>
+
+  <div class="checkbox-row">
+    <input type="checkbox" id="is-group-bet" name="is_group_bet">
+    <label for="is-group-bet" style="margin:0">This is one of the weekly group parlays</label>
+  </div>
+
+  <label>Sportsbook (optional)</label>
+  <input list="sportsbook-options" name="sportsbook" placeholder="DraftKings">
+  <datalist id="sportsbook-options">
+    <option value="DraftKings"><option value="FanDuel"><option value="BetMGM"><option value="Caesars"><option value="ESPN Bet"><option value="bet365">
+  </datalist>
+
+  <label>Date</label>
+  <input type="date" name="placed_date" value="{{ today }}" required>
+
+  <label>Risk / Stake ($)</label>
+  <input type="number" step="0.01" min="0" name="risk_amount" required>
+
+  <label>Notes (optional)</label>
+  <textarea name="notes"></textarea>
+
+  <h2>Legs</h2>
+  <div id="legs"></div>
+  <button type="button" class="secondary" id="add-leg">+ Add leg</button>
+
+  <div><button type="submit">Save Bet</button></div>
+</form>
+
+<template id="leg-template">
+  <div class="leg-row">
+    <button type="button" class="remove-leg" title="Remove leg">&times;</button>
+    <label>Bettor</label>
+    <select name="leg_bettor_id" required>
+      {% for b in bettors %}
+      <option value="{{ b.id }}">{{ b.name }} ({{ b.short_code }})</option>
+      {% endfor %}
+    </select>
+    <div class="leg-grid">
+      <div>
+        <label>Player (optional)</label>
+        <input list="player-options" name="leg_player_name" placeholder="e.g. Saquon Barkley">
+      </div>
+      <div>
+        <label>Prop Category</label>
+        <input list="category-options" name="leg_prop_category" required placeholder="e.g. Rushing Yards by RB">
+      </div>
+    </div>
+    <label>Description</label>
+    <input name="leg_description" required placeholder="e.g. 70+ rush yards">
+    <label>Odds (American, e.g. -150 or +120)</label>
+    <input type="number" name="leg_odds" required placeholder="-150">
+  </div>
+</template>
+
+<datalist id="player-options">
+  {% for name in player_names %}<option value="{{ name }}">{% endfor %}
+</datalist>
+<datalist id="category-options">
+  {% for name in category_names %}<option value="{{ name }}">{% endfor %}
+</datalist>
+
+<script src="{{ url_for('static', filename='leg_form.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Betting Tracker{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <nav class="topnav">
+    <a href="{{ url_for('dashboard') }}">Dashboard</a>
+    <a href="{{ url_for('bets_list') }}">Bets</a>
+    <a href="{{ url_for('bets_new') }}" class="new-bet">+ New Bet</a>
+    <a href="{{ url_for('bettors_page') }}">Bettors</a>
+    <a href="{{ url_for('bet_types_page') }}">Bet Types</a>
+    <a href="{{ url_for('players_page') }}">Players</a>
+  </nav>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

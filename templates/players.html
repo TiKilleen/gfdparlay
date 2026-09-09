@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Players{% endblock %}
+{% block content %}
+
+<h1>Players</h1>
+<p style="color: var(--muted)">{{ players|length }} players. Most are seeded from the NFL roster import; add anyone else here (NCAA players, etc.) or just type a new name directly on the bet form.</p>
+
+<h2>Add a player</h2>
+<form class="stacked" method="post" action="{{ url_for('players_page') }}">
+  <label>Name</label>
+  <input name="display_name" required placeholder="e.g. Cam Ward">
+  <button type="submit">Add Player</button>
+</form>
+
+<div class="panel">
+  <table>
+    <tr><th>Name</th><th>Source</th></tr>
+    {% for p in players %}
+    <tr><td>{{ p.display_name }}</td><td>{{ p.source }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+
+{% endblock %}
