@@ -21,7 +21,7 @@
 <div class="panel">
   <h3>Bettor Scoreboard</h3>
   <table>
-    <tr><th>Bettor</th><th>W</th><th>L</th><th>Win%</th><th>Streak</th><th>Avg Odds</th></tr>
+    <tr><th>Bettor</th><th>W</th><th>L</th><th>Win%</th><th>Streak</th><th>Longest Streak</th><th>Avg Odds</th></tr>
     {% for row in group_bettors %}
     <tr>
       <td>{{ row.name }}</td>
@@ -29,10 +29,11 @@
       <td>{{ row.losses }}</td>
       <td>{{ row.win_pct if row.win_pct is not none else "-" }}%</td>
       <td>{{ row.streak }}</td>
+      <td>{{ row.longest_streak }}</td>
       <td>{{ row.avg_odds if row.avg_odds is not none else "-" }}</td>
     </tr>
     {% else %}
-    <tr><td colspan="6" style="color: var(--muted)">No graded group-parlay legs yet.</td></tr>
+    <tr><td colspan="7" style="color: var(--muted)">No graded group-parlay legs yet.</td></tr>
     {% endfor %}
   </table>
 </div>

@@ -93,6 +93,19 @@ def bettor_scoreboard(is_group_bet):
             else:
                 break
 
+        # Longest winning run to date -- pushes are no-decisions and don't
+        # break a run, same as the current-streak logic above.
+        longest_win_streak = 0
+        run = 0
+        for leg in legs:
+            if leg.result == "push":
+                continue
+            if leg.result == "win":
+                run += 1
+                longest_win_streak = max(longest_win_streak, run)
+            else:
+                run = 0
+
         scoreboard.append(
             {
                 "name": bettor.name,
@@ -103,6 +116,7 @@ def bettor_scoreboard(is_group_bet):
                 "streak": f"{'W' if streak_type == 'win' else 'L'}{streak}"
                 if streak_type
                 else "-",
+                "longest_streak": f"W{longest_win_streak}" if longest_win_streak else "-",
             }
         )
     return sorted(scoreboard, key=lambda row: row["win_pct"] or -1, reverse=True)
