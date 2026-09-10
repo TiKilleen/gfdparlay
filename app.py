@@ -106,8 +106,8 @@ def register_routes(app):
             group_players=analytics.player_leaderboard(is_group_bet=True),
             group_bettors=analytics.bettor_scoreboard(is_group_bet=True),
             group_categories=analytics.category_breakdown(is_group_bet=True),
-            solo_categories=analytics.category_breakdown(is_group_bet=False),
-            solo_roi=analytics.solo_roi_by_sport_and_type(),
+            my_categories=analytics.my_category_breakdown(),
+            my_roi=analytics.overall_roi_by_sport_and_type(),
         )
 
     @app.get("/bets")

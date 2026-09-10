@@ -1,6 +1,7 @@
-"""Query helpers backing the two dashboard sections. Every function takes an
-`is_group_bet` filter so Group Parlay Analysis and Solo Bet Analysis stay
-built from the same code path but never mix data.
+"""Query helpers backing the two dashboard sections: Group Parlay Analysis
+(is_group_bet-scoped, about the friend group's picks) and My Overall
+Performance (Tim's own money and picks across everything, group parlays
+included).
 """
 
 from decimal import Decimal
@@ -122,14 +123,19 @@ def bettor_scoreboard(is_group_bet):
     return sorted(scoreboard, key=lambda row: row["win_pct"] or -1, reverse=True)
 
 
-def solo_roi_by_sport_and_type():
+def overall_roi_by_sport_and_type():
+    """Money is tracked per-bet, not per-leg -- Tim carries the full stake
+    and profit of a group parlay just like a solo bet (there's no separate
+    concept of "whose money" a leg represents), so this covers every bet,
+    group parlays included.
+    """
     risk = func.sum(Bet.risk_amount)
     profit = func.sum(Bet.profit)
 
     rows = (
         db.session.query(Bet.sport, BetType.name, risk, profit)
         .join(BetType, BetType.id == Bet.bet_type_id)
-        .filter(Bet.is_group_bet.is_(False), Bet.result != "pending")
+        .filter(Bet.result != "pending")
         .group_by(Bet.sport, BetType.name)
         .order_by(Bet.sport)
         .all()
@@ -149,3 +155,30 @@ def solo_roi_by_sport_and_type():
             }
         )
     return results
+
+
+def my_category_breakdown():
+    """Prop-category win% for Tim's own leg picks specifically -- unlike
+    category_breakdown(is_group_bet), this filters by bettor, not by
+    whether the bet was a group parlay, so it covers his solo bets *and*
+    his own leg within each group parlay, but never a friend's leg.
+    """
+    self_bettor = Bettor.query.filter_by(short_code="ME").first()
+    if self_bettor is None:
+        return []
+
+    wins = func.sum(case((Leg.result == "win", 1), else_=0))
+    losses = func.sum(case((Leg.result == "loss", 1), else_=0))
+
+    rows = (
+        db.session.query(PropCategory.name, wins, losses)
+        .join(Leg, Leg.prop_category_id == PropCategory.id)
+        .filter(Leg.bettor_id == self_bettor.id, Leg.result != "pending")
+        .group_by(PropCategory.id)
+        .order_by(wins.desc())
+        .all()
+    )
+    return [
+        {"name": name, "wins": w, "losses": l, "win_pct": _win_pct(w, l)}
+        for name, w, l in rows
+    ]

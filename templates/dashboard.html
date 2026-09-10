@@ -72,14 +72,14 @@
   </table>
 </div>
 
-<h1>Solo Bet Analysis</h1>
-<p style="color: var(--muted)">Bets Tim placed on his own -- what's actually working.</p>
+<h1>My Overall Performance</h1>
+<p style="color: var(--muted)">Everything you're financially on the hook for -- solo bets plus every group parlay (the whole parlay's stake and profit are yours, not split), and your own leg-picking record within those group parlays.</p>
 
 <div class="panel">
   <h3>ROI by Sport / Bet Type</h3>
   <table>
     <tr><th>Sport</th><th>Bet Type</th><th>Risk</th><th>Profit</th><th>ROI</th></tr>
-    {% for row in solo_roi %}
+    {% for row in my_roi %}
     <tr>
       <td>{{ row.sport }}</td>
       <td>{{ row.bet_type }}</td>
@@ -88,16 +88,16 @@
       <td>{{ row.roi if row.roi is not none else "-" }}%</td>
     </tr>
     {% else %}
-    <tr><td colspan="5" style="color: var(--muted)">No graded solo bets yet.</td></tr>
+    <tr><td colspan="5" style="color: var(--muted)">No graded bets yet.</td></tr>
     {% endfor %}
   </table>
 </div>
 
 <div class="panel">
-  <h3>Solo Prop Category Win %</h3>
+  <h3>My Prop Category Win %</h3>
   <table>
     <tr><th>Category</th><th>W</th><th>L</th><th>Win%</th></tr>
-    {% for row in solo_categories %}
+    {% for row in my_categories %}
     <tr>
       <td>{{ row.name }}</td>
       <td>{{ row.wins }}</td>
@@ -105,7 +105,7 @@
       <td>{{ row.win_pct if row.win_pct is not none else "-" }}%</td>
     </tr>
     {% else %}
-    <tr><td colspan="4" style="color: var(--muted)">No graded solo-bet legs yet.</td></tr>
+    <tr><td colspan="4" style="color: var(--muted)">No graded picks of yours yet.</td></tr>
     {% endfor %}
   </table>
 </div>
