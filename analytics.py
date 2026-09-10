@@ -157,6 +157,18 @@ def overall_roi_by_sport_and_type():
     return results
 
 
+def roi_total(rows):
+    """Sums the rows from overall_roi_by_sport_and_type() into one grand
+    total -- kept as a separate step rather than a SQL-side grand total so
+    the per-row and total figures can never drift out of sync with each
+    other.
+    """
+    total_risk = sum((row["risk"] for row in rows), Decimal(0))
+    total_profit = sum((row["profit"] for row in rows), Decimal(0))
+    roi = round(100 * total_profit / total_risk, 1) if total_risk else None
+    return {"risk": total_risk, "profit": total_profit, "roi": roi}
+
+
 def my_category_breakdown():
     """Prop-category win% for Tim's own leg picks specifically -- unlike
     category_breakdown(is_group_bet), this filters by bettor, not by

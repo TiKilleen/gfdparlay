@@ -100,6 +100,7 @@ def register_routes(app):
             .order_by(Bet.placed_date)
             .all()
         )
+        my_roi = analytics.overall_roi_by_sport_and_type()
         return render_template(
             "dashboard.html",
             pending_bets=pending_bets,
@@ -107,7 +108,8 @@ def register_routes(app):
             group_bettors=analytics.bettor_scoreboard(is_group_bet=True),
             group_categories=analytics.category_breakdown(is_group_bet=True),
             my_categories=analytics.my_category_breakdown(),
-            my_roi=analytics.overall_roi_by_sport_and_type(),
+            my_roi=my_roi,
+            my_roi_total=analytics.roi_total(my_roi),
         )
 
     @app.get("/bets")

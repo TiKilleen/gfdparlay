@@ -90,11 +90,19 @@
     {% else %}
     <tr><td colspan="5" style="color: var(--muted)">No graded bets yet.</td></tr>
     {% endfor %}
+    {% if my_roi %}
+    <tr style="font-weight:600">
+      <td colspan="2">Total</td>
+      <td>{{ my_roi_total.risk|money }}</td>
+      <td class="{{ 'win' if my_roi_total.profit > 0 else ('loss' if my_roi_total.profit < 0 else '') }}">{{ my_roi_total.profit|money }}</td>
+      <td>{{ my_roi_total.roi if my_roi_total.roi is not none else "-" }}%</td>
+    </tr>
+    {% endif %}
   </table>
 </div>
 
 <div class="panel">
-  <h3>My Prop Category Win %</h3>
+  <h3>My Bet Category Win %</h3>
   <table>
     <tr><th>Category</th><th>W</th><th>L</th><th>Win%</th></tr>
     {% for row in my_categories %}
