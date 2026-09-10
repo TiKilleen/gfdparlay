@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Edit Bet{% endblock %}
+{% block content %}
+
+<h1>Edit Bet</h1>
+<p style="color: var(--muted)">Fixing a typo from entry -- if you add or remove a leg here, any existing grading on this bet resets to pending, since there's no reliable way to match old results to a different set of legs.</p>
+
+<form class="stacked" method="post" action="{{ url_for('bet_edit', bet_id=bet.id) }}">
+  <label>Sport</label>
+  <input list="sport-options" name="sport" required value="{{ bet.sport }}">
+  <datalist id="sport-options">
+    <option value="NFL"><option value="NCAA"><option value="NBA"><option value="NCAAB">
+  </datalist>
+
+  <label>Bet Type</label>
+  <select id="bet-type-select" name="bet_type_id" required>
+    {% for bt in bet_types %}
+    <option value="{{ bt.id }}" data-default-group="{{ bt.default_is_group|lower }}" {{ 'selected' if bt.id == bet.bet_type_id }}>{{ bt.name }}</option>
+    {% endfor %}
+  </select>
+  <p style="margin:6px 0 0"><a href="{{ url_for('bet_types_page') }}" class="tag" style="text-decoration:none">+ add a new bet type</a></p>
+
+  <div class="checkbox-row">
+    <input type="checkbox" id="is-group-bet" name="is_group_bet" {{ 'checked' if bet.is_group_bet }}>
+    <label for="is-group-bet" style="margin:0">This is one of the weekly group parlays</label>
+  </div>
+
+  <label>Sportsbook (optional)</label>
+  <input list="sportsbook-options" name="sportsbook" value="{{ bet.sportsbook or '' }}">
+  <datalist id="sportsbook-options">
+    <option value="DraftKings"><option value="FanDuel"><option value="BetMGM"><option value="Caesars"><option value="ESPN Bet"><option value="bet365">
+  </datalist>
+
+  <label>Date</label>
+  <input type="date" name="placed_date" value="{{ bet.placed_date.isoformat() }}" required>
+
+  <label>Risk / Stake ($)</label>
+  <input type="number" step="0.01" min="0" name="risk_amount" value="{{ bet.risk_amount }}" required>
+
+  <label>Override winnings if you win ($, optional)</label>
+  <input type="number" step="0.01" min="0" name="to_win_override"
+         value="{{ bet.to_win_override if bet.to_win_override is not none else '' }}"
+         placeholder="Leave blank to auto-calculate from odds">
+  <p style="margin:4px 0 0; color: var(--muted); font-size: 13px">Winnings only, not your stake back -- same as a book's "to win" figure, not its "total payout" figure.</p>
+
+  <label>Notes (optional)</label>
+  <textarea name="notes">{{ bet.notes or '' }}</textarea>
+
+  <h2>Legs</h2>
+  <div id="legs"></div>
+  <button type="button" class="secondary" id="add-leg">+ Add leg</button>
+
+  <div><button type="submit">Save Changes</button></div>
+</form>
+
+<template id="leg-template">
+  <div class="leg-row">
+    <button type="button" class="remove-leg" title="Remove leg">&times;</button>
+    <label>Bettor</label>
+    <select name="leg_bettor_id" required>
+      {% for b in bettors %}
+      <option value="{{ b.id }}">{{ b.name }} ({{ b.short_code }})</option>
+      {% endfor %}
+    </select>
+    <div class="leg-grid">
+      <div class="autocomplete-field">
+        <label>Player (optional)</label>
+        <input name="leg_player_name" placeholder="e.g. Saquon Barkley" data-autocomplete="player" autocomplete="off">
+        <div class="autocomplete-list"></div>
+      </div>
+      <div class="autocomplete-field">
+        <label>Prop Category</label>
+        <input name="leg_prop_category" required placeholder="e.g. Rushing Yards by RB" data-autocomplete="category" autocomplete="off">
+        <div class="autocomplete-list"></div>
+      </div>
+    </div>
+    <label>Description</label>
+    <input name="leg_description" required placeholder="e.g. 70+ rush yards">
+    <label>Odds (American, e.g. -150 or +120)</label>
+    <input type="number" name="leg_odds" required placeholder="-150">
+  </div>
+</template>
+
+<script>
+  window.AUTOCOMPLETE_OPTIONS = {
+    player: {{ player_names|tojson }},
+    category: {{ category_names|tojson }}
+  };
+  window.EXISTING_LEGS = {{ existing_legs|tojson }};
+</script>
+<script src="{{ url_for('static', filename='leg_form.js') }}"></script>
+{% endblock %}

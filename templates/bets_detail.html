@@ -4,6 +4,7 @@
 
 <h1>{{ bet.sport }} &middot; {{ bet.bet_type.name }}
   <span class="tag">{{ 'Group Parlay' if bet.is_group_bet else 'Solo' }}</span>
+  <a href="{{ url_for('bet_edit', bet_id=bet.id) }}" class="tag" style="text-decoration:none">edit</a>
 </h1>
 <p style="color: var(--muted)">
   {{ bet.placed_date.strftime('%-m/%-d/%Y') }}

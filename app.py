@@ -64,6 +64,30 @@ def parse_optional_decimal(raw_value):
     return Decimal(raw_value)
 
 
+def parse_legs_from_form(form):
+    bettor_ids = form.getlist("leg_bettor_id")
+    player_names = form.getlist("leg_player_name")
+    category_names = form.getlist("leg_prop_category")
+    descriptions = form.getlist("leg_description")
+    odds_values = form.getlist("leg_odds")
+
+    if not bettor_ids:
+        abort(400, "A bet needs at least one leg")
+
+    legs = []
+    for i in range(len(bettor_ids)):
+        legs.append(
+            {
+                "bettor_id": int(bettor_ids[i]),
+                "player": get_or_create_player(player_names[i]),
+                "prop_category": get_or_create_prop_category(category_names[i]),
+                "description": descriptions[i].strip(),
+                "odds": int(odds_values[i]),
+            }
+        )
+    return legs
+
+
 def register_routes(app):
     @app.get("/health")
     def health():
@@ -125,14 +149,7 @@ def register_routes(app):
         except (KeyError, ValueError, InvalidOperation):
             abort(400, "Missing or invalid bet fields")
 
-        bettor_ids = request.form.getlist("leg_bettor_id")
-        player_names = request.form.getlist("leg_player_name")
-        category_names = request.form.getlist("leg_prop_category")
-        descriptions = request.form.getlist("leg_description")
-        odds_values = request.form.getlist("leg_odds")
-
-        if not bettor_ids:
-            abort(400, "A bet needs at least one leg")
+        legs = parse_legs_from_form(request.form)
 
         bet = Bet(
             sport=form["sport"],
@@ -142,25 +159,12 @@ def register_routes(app):
             placed_date=placed_date,
             risk_amount=risk_amount,
             notes=form.get("notes") or None,
-            is_parlay=len(bettor_ids) > 1,
+            is_parlay=len(legs) > 1,
             to_win_override=to_win_override,
         )
+        bet.legs = [Leg(**leg_data) for leg_data in legs]
 
-        leg_odds = []
-        for i in range(len(bettor_ids)):
-            odds_int = int(odds_values[i])
-            leg_odds.append(odds_int)
-            bet.legs.append(
-                Leg(
-                    bettor_id=int(bettor_ids[i]),
-                    player=get_or_create_player(player_names[i]),
-                    prop_category=get_or_create_prop_category(category_names[i]),
-                    description=descriptions[i].strip(),
-                    odds=odds_int,
-                )
-            )
-
-        combined = combined_decimal_odds(leg_odds)
+        combined = combined_decimal_odds(leg["odds"] for leg in legs)
         bet.to_win_amount = money(risk_amount * (combined - 1))
 
         db.session.add(bet)
@@ -171,6 +175,78 @@ def register_routes(app):
     def bet_detail(bet_id):
         bet = Bet.query.get_or_404(bet_id)
         return render_template("bets_detail.html", bet=bet, result_values=RESULT_VALUES)
+
+    @app.route("/bets/<int:bet_id>/edit", methods=["GET", "POST"])
+    def bet_edit(bet_id):
+        bet = Bet.query.get_or_404(bet_id)
+
+        if request.method == "GET":
+            existing_legs = [
+                {
+                    "bettor_id": leg.bettor_id,
+                    "player_name": leg.player.display_name if leg.player else "",
+                    "prop_category": leg.prop_category.name,
+                    "description": leg.description,
+                    "odds": leg.odds,
+                }
+                for leg in bet.legs
+            ]
+            return render_template(
+                "bets_edit.html",
+                bet=bet,
+                bet_types=BetType.query.order_by(BetType.name).all(),
+                bettors=Bettor.query.order_by(Bettor.name).all(),
+                player_names=[p.display_name for p in Player.query.all()],
+                category_names=[c.name for c in PropCategory.query.all()],
+                existing_legs=existing_legs,
+            )
+
+        form = request.form
+        try:
+            bet_type_id = int(form["bet_type_id"])
+            placed_date = date.fromisoformat(form["placed_date"])
+            risk_amount = Decimal(form["risk_amount"])
+            to_win_override = parse_optional_decimal(form.get("to_win_override"))
+        except (KeyError, ValueError, InvalidOperation):
+            abort(400, "Missing or invalid bet fields")
+
+        legs = parse_legs_from_form(form)
+
+        bet.sport = form["sport"]
+        bet.bet_type_id = bet_type_id
+        bet.is_group_bet = "is_group_bet" in form
+        bet.sportsbook = form.get("sportsbook") or None
+        bet.placed_date = placed_date
+        bet.risk_amount = risk_amount
+        bet.notes = form.get("notes") or None
+        bet.is_parlay = len(legs) > 1
+        bet.to_win_override = to_win_override
+
+        existing_leg_rows = list(bet.legs)
+        if len(existing_leg_rows) == len(legs):
+            # Same leg count -- update in place so any existing grading
+            # on this bet survives the edit.
+            for leg_row, leg_data in zip(existing_leg_rows, legs):
+                leg_row.bettor_id = leg_data["bettor_id"]
+                leg_row.player = leg_data["player"]
+                leg_row.prop_category = leg_data["prop_category"]
+                leg_row.description = leg_data["description"]
+                leg_row.odds = leg_data["odds"]
+        else:
+            # Leg count changed -- no reliable way to map old results onto
+            # a different set of legs, so replace them and reset grading.
+            bet.legs = [Leg(**leg_data) for leg_data in legs]
+            bet.result = "pending"
+            bet.profit = None
+
+        combined = combined_decimal_odds(leg["odds"] for leg in legs)
+        bet.to_win_amount = money(risk_amount * (combined - 1))
+
+        if bet.result != "pending":
+            bet.result, bet.profit = compute_bet_outcome(bet)
+
+        db.session.commit()
+        return redirect(url_for("bet_detail", bet_id=bet.id))
 
     @app.post("/bets/<int:bet_id>/grade")
     def bet_grade(bet_id):
