@@ -199,7 +199,7 @@ def register_routes(app):
         legs = parse_legs_from_form(request.form)
 
         bet = Bet(
-            sport=form["sport"],
+            sport=form["sport"].strip(),
             bet_type_id=bet_type_id,
             is_group_bet="is_group_bet" in form,
             sportsbook=form.get("sportsbook") or None,
@@ -259,7 +259,7 @@ def register_routes(app):
 
         legs = parse_legs_from_form(form)
 
-        bet.sport = form["sport"]
+        bet.sport = form["sport"].strip()
         bet.bet_type_id = bet_type_id
         bet.is_group_bet = "is_group_bet" in form
         bet.sportsbook = form.get("sportsbook") or None
