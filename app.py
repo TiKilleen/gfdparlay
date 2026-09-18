@@ -100,16 +100,61 @@ def register_routes(app):
             .order_by(Bet.placed_date)
             .all()
         )
-        my_roi = analytics.overall_roi_by_sport_and_type()
+
+        def sport_filter(param_name, default):
+            raw = request.args.get(param_name, default)
+            return raw, (None if raw == "all" else raw)
+
+        def bet_type_filter(param_name):
+            raw = request.args.get(param_name, "all")
+            return raw, (None if raw == "all" else int(raw))
+
+        bs_sport_raw, bs_sport = sport_filter("bs_sport", "all")
+        bs_bet_type_raw, bs_bet_type_id = bet_type_filter("bs_bet_type")
+        pl_sport_raw, pl_sport = sport_filter("pl_sport", "NFL")
+        pc_sport_raw, pc_sport = sport_filter("pc_sport", "NFL")
+        roi_sport_raw, roi_sport = sport_filter("roi_sport", "all")
+        roi_bet_type_raw, roi_bet_type_id = bet_type_filter("roi_bet_type")
+        bc_sport_raw, bc_sport = sport_filter("bc_sport", "all")
+
+        bettors = Bettor.query.order_by(Bettor.name).all()
+        bc_bettor_code = request.args.get("bc_bettor", "ME")
+        bc_bettor = next((b for b in bettors if b.short_code == bc_bettor_code), None)
+        if bc_bettor is None:
+            bc_bettor = next((b for b in bettors if b.short_code == "ME"), None)
+
+        my_roi = analytics.overall_roi_by_sport_and_type(
+            sport=roi_sport, bet_type_id=roi_bet_type_id
+        )
+
         return render_template(
             "dashboard.html",
             pending_bets=pending_bets,
-            group_players=analytics.player_leaderboard(is_group_bet=True),
-            group_bettors=analytics.bettor_scoreboard(is_group_bet=True),
-            group_categories=analytics.category_breakdown(is_group_bet=True),
-            my_categories=analytics.my_category_breakdown(),
+            sports=analytics.distinct_sports(),
+            bet_types=BetType.query.order_by(BetType.name).all(),
+            bettors=bettors,
+            group_players=analytics.player_leaderboard(is_group_bet=True, sport=pl_sport),
+            group_bettors=analytics.bettor_scoreboard(
+                is_group_bet=True, sport=bs_sport, bet_type_id=bs_bet_type_id
+            ),
+            group_categories=analytics.category_breakdown(is_group_bet=True, sport=pc_sport),
+            my_categories=analytics.bet_category_breakdown_by_bettor(
+                bc_bettor.id, sport=bc_sport
+            )
+            if bc_bettor
+            else [],
             my_roi=my_roi,
             my_roi_total=analytics.roi_total(my_roi),
+            selected={
+                "bs_sport": bs_sport_raw,
+                "bs_bet_type": bs_bet_type_raw,
+                "pl_sport": pl_sport_raw,
+                "pc_sport": pc_sport_raw,
+                "roi_sport": roi_sport_raw,
+                "roi_bet_type": roi_bet_type_raw,
+                "bc_sport": bc_sport_raw,
+                "bc_bettor": bc_bettor.short_code if bc_bettor else "ME",
+            },
         )
 
     @app.get("/bets")

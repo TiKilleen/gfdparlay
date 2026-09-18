@@ -1,7 +1,10 @@
 """Query helpers backing the two dashboard sections: Group Parlay Analysis
 (is_group_bet-scoped, about the friend group's picks) and My Overall
 Performance (Tim's own money and picks across everything, group parlays
-included).
+included). Most functions take an optional `sport` filter (None = all
+sports); a couple take an optional `bet_type_id` filter too. None of these
+group by bet type -- bet type is purely a filter dimension, sport is the
+only thing rows ever get broken out by.
 """
 
 from decimal import Decimal
@@ -17,46 +20,53 @@ def _win_pct(wins, losses):
     return round(100 * wins / decided, 1) if decided else None
 
 
-def player_leaderboard(is_group_bet):
+def distinct_sports():
+    rows = db.session.query(Bet.sport).distinct().order_by(Bet.sport).all()
+    return [row[0] for row in rows]
+
+
+def player_leaderboard(is_group_bet, sport=None):
     wins = func.sum(case((Leg.result == "win", 1), else_=0))
     losses = func.sum(case((Leg.result == "loss", 1), else_=0))
     pushes = func.sum(case((Leg.result == "push", 1), else_=0))
 
-    rows = (
+    query = (
         db.session.query(Player.display_name, wins, losses, pushes)
         .join(Leg, Leg.player_id == Player.id)
         .join(Bet, Bet.id == Leg.bet_id)
         .filter(Bet.is_group_bet == is_group_bet, Leg.result != "pending")
-        .group_by(Player.id)
-        .order_by(wins.desc())
-        .all()
     )
+    if sport:
+        query = query.filter(Bet.sport == sport)
+
+    rows = query.group_by(Player.id).order_by(wins.desc()).all()
     return [
         {"name": name, "wins": w, "losses": l, "pushes": p, "win_pct": _win_pct(w, l)}
         for name, w, l, p in rows
     ]
 
 
-def category_breakdown(is_group_bet):
+def category_breakdown(is_group_bet, sport=None):
     wins = func.sum(case((Leg.result == "win", 1), else_=0))
     losses = func.sum(case((Leg.result == "loss", 1), else_=0))
 
-    rows = (
+    query = (
         db.session.query(PropCategory.name, wins, losses)
         .join(Leg, Leg.prop_category_id == PropCategory.id)
         .join(Bet, Bet.id == Leg.bet_id)
         .filter(Bet.is_group_bet == is_group_bet, Leg.result != "pending")
-        .group_by(PropCategory.id)
-        .order_by(wins.desc())
-        .all()
     )
+    if sport:
+        query = query.filter(Bet.sport == sport)
+
+    rows = query.group_by(PropCategory.id).order_by(wins.desc()).all()
     return [
         {"name": name, "wins": w, "losses": l, "win_pct": _win_pct(w, l)}
         for name, w, l in rows
     ]
 
 
-def bettor_scoreboard(is_group_bet):
+def bettor_scoreboard(is_group_bet, sport=None, bet_type_id=None):
     """Win/loss record, win%, current streak, and average odds per bettor,
     scoped to group-parlay legs only. Streak is computed in Python (over
     chronologically-ordered results) rather than SQL -- there are only a
@@ -66,7 +76,7 @@ def bettor_scoreboard(is_group_bet):
     bettors = Bettor.query.order_by(Bettor.name).all()
     scoreboard = []
     for bettor in bettors:
-        legs = (
+        query = (
             db.session.query(Leg)
             .join(Bet, Bet.id == Leg.bet_id)
             .filter(
@@ -74,9 +84,13 @@ def bettor_scoreboard(is_group_bet):
                 Bet.is_group_bet == is_group_bet,
                 Leg.result != "pending",
             )
-            .order_by(Bet.placed_date, Leg.id)
-            .all()
         )
+        if sport:
+            query = query.filter(Bet.sport == sport)
+        if bet_type_id:
+            query = query.filter(Bet.bet_type_id == bet_type_id)
+
+        legs = query.order_by(Bet.placed_date, Leg.id).all()
         wins = sum(1 for leg in legs if leg.result == "win")
         losses = sum(1 for leg in legs if leg.result == "loss")
         avg_odds = round(sum(leg.odds for leg in legs) / len(legs)) if legs else None
@@ -123,32 +137,42 @@ def bettor_scoreboard(is_group_bet):
     return sorted(scoreboard, key=lambda row: row["win_pct"] or -1, reverse=True)
 
 
-def overall_roi_by_sport_and_type():
+def overall_roi_by_sport_and_type(sport=None, bet_type_id=None):
     """Money is tracked per-bet, not per-leg -- Tim carries the full stake
     and profit of a group parlay just like a solo bet (there's no separate
     concept of "whose money" a leg represents), so this covers every bet,
     group parlays included.
+
+    Always groups by sport only, one row each. bet_type_id narrows which
+    bets get counted but never splits a sport into multiple rows -- the
+    default (no bet_type_id) rolls every bet type together per sport,
+    displayed as "All" by the caller.
     """
     risk = func.sum(Bet.risk_amount)
     profit = func.sum(Bet.profit)
 
-    rows = (
-        db.session.query(Bet.sport, BetType.name, risk, profit)
-        .join(BetType, BetType.id == Bet.bet_type_id)
-        .filter(Bet.result != "pending")
-        .group_by(Bet.sport, BetType.name)
-        .order_by(Bet.sport)
-        .all()
-    )
+    query = db.session.query(Bet.sport, risk, profit).filter(Bet.result != "pending")
+    if sport:
+        query = query.filter(Bet.sport == sport)
+    if bet_type_id:
+        query = query.filter(Bet.bet_type_id == bet_type_id)
+
+    rows = query.group_by(Bet.sport).order_by(Bet.sport).all()
+
+    if bet_type_id:
+        bet_type_label = BetType.query.get(bet_type_id).name
+    else:
+        bet_type_label = "All"
+
     results = []
-    for sport, bet_type, total_risk, total_profit in rows:
+    for sport_name, total_risk, total_profit in rows:
         total_risk = total_risk or Decimal(0)
         total_profit = total_profit or Decimal(0)
         roi = round(100 * total_profit / total_risk, 1) if total_risk else None
         results.append(
             {
-                "sport": sport,
-                "bet_type": bet_type,
+                "sport": sport_name,
+                "bet_type": bet_type_label,
                 "risk": total_risk,
                 "profit": total_profit,
                 "roi": roi,
@@ -169,27 +193,26 @@ def roi_total(rows):
     return {"risk": total_risk, "profit": total_profit, "roi": roi}
 
 
-def my_category_breakdown():
-    """Prop-category win% for Tim's own leg picks specifically -- unlike
+def bet_category_breakdown_by_bettor(bettor_id, sport=None):
+    """Prop-category win% for one specific bettor's own leg picks -- unlike
     category_breakdown(is_group_bet), this filters by bettor, not by
-    whether the bet was a group parlay, so it covers his solo bets *and*
-    his own leg within each group parlay, but never a friend's leg.
+    whether the bet was a group parlay, so it covers that person's solo
+    bets *and* their own leg within each group parlay, but never a
+    teammate's leg.
     """
-    self_bettor = Bettor.query.filter_by(short_code="ME").first()
-    if self_bettor is None:
-        return []
-
     wins = func.sum(case((Leg.result == "win", 1), else_=0))
     losses = func.sum(case((Leg.result == "loss", 1), else_=0))
 
-    rows = (
+    query = (
         db.session.query(PropCategory.name, wins, losses)
         .join(Leg, Leg.prop_category_id == PropCategory.id)
-        .filter(Leg.bettor_id == self_bettor.id, Leg.result != "pending")
-        .group_by(PropCategory.id)
-        .order_by(wins.desc())
-        .all()
+        .join(Bet, Bet.id == Leg.bet_id)
+        .filter(Leg.bettor_id == bettor_id, Leg.result != "pending")
     )
+    if sport:
+        query = query.filter(Bet.sport == sport)
+
+    rows = query.group_by(PropCategory.id).order_by(wins.desc()).all()
     return [
         {"name": name, "wins": w, "losses": l, "win_pct": _win_pct(w, l)}
         for name, w, l in rows
