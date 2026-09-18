@@ -8,8 +8,10 @@ live instead of re-tallied by hand.
 
 Two dashboard sections stay strictly separate, matching how the sheet
 already worked: **Group Parlay Analysis** (the weekly 5-friend parlays) and
-**Solo Bet Analysis** (bets placed alone). A bet's `is_group_bet` flag is
-what decides which section it counts toward -- not its bet type name.
+**My Overall Performance** (everything Tim's financially on the hook for,
+group parlays included). A bet's `is_group_bet` flag is what decides
+which section its category/player stats count toward -- not its bet type
+name.
 
 ## Local development
 
@@ -57,6 +59,20 @@ This follows the same manual-dashboard pattern as `btwb-project` -- no
 5. Once it's live, SSH/shell into the service (or run locally against the
    same `DATABASE_URL`) to run `python seed.py` and `python import_players.py`
    once, the same as local setup.
+
+## Sharing read-only access
+
+The app has no accounts -- by default every route is wide open. To share
+the dashboard with friends without letting them add/edit/grade bets, set
+an `EDIT_PASSWORD` env var on the Web Service. Once set:
+
+- `/` (the dashboard) stays open to anyone with the link.
+- Every other route (`/bets`, `/bets/new`, grading, management pages,
+  etc.) redirects to a password prompt.
+- Logging in as Tim sets a session cookie that sticks around for 30 days,
+  so it's a one-time thing per device, not per visit.
+- Leaving `EDIT_PASSWORD` unset keeps the app exactly as open as it's
+  always been -- nothing changes until this is turned on deliberately.
 
 ## Not built yet (by design -- see the plan for why)
 

@@ -1,7 +1,8 @@
+import hmac
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
-from flask import Flask, abort, redirect, render_template, request, url_for
+from flask import Flask, abort, redirect, render_template, request, session, url_for
 from flask_migrate import Migrate
 
 import analytics
@@ -25,6 +26,24 @@ def create_app():
         if value is None:
             return "-"
         return f"-${-value:.2f}" if value < 0 else f"${value:.2f}"
+
+    OPEN_PATHS = {"/", "/login", "/health"}
+
+    @app.before_request
+    def require_login():
+        # Left unset, the app stays fully open -- this only starts gating
+        # anything once EDIT_PASSWORD is actually configured.
+        if not config.EDIT_PASSWORD:
+            return
+        if request.path in OPEN_PATHS or request.path.startswith("/static"):
+            return
+        if session.get("authorized"):
+            return
+        return redirect(url_for("login", next=request.path))
+
+    @app.context_processor
+    def inject_auth_state():
+        return {"password_gate_enabled": bool(config.EDIT_PASSWORD), "is_authorized": bool(session.get("authorized"))}
 
     register_routes(app)
     return app
@@ -92,6 +111,23 @@ def register_routes(app):
     @app.get("/health")
     def health():
         return {"status": "ok"}
+
+    @app.route("/login", methods=["GET", "POST"])
+    def login():
+        error = None
+        if request.method == "POST":
+            entered = request.form.get("password", "")
+            if config.EDIT_PASSWORD and hmac.compare_digest(entered, config.EDIT_PASSWORD):
+                session.permanent = True
+                session["authorized"] = True
+                return redirect(request.args.get("next") or url_for("dashboard"))
+            error = "Wrong password."
+        return render_template("login.html", error=error)
+
+    @app.get("/logout")
+    def logout():
+        session.pop("authorized", None)
+        return redirect(url_for("dashboard"))
 
     @app.get("/")
     def dashboard():
