@@ -10,6 +10,7 @@
   <nav class="topnav">
     <a href="{{ url_for('dashboard') }}">Dashboard</a>
     {% if is_authorized or not password_gate_enabled %}
+    <a href="{{ url_for('performance') }}">My Performance</a>
     <a href="{{ url_for('bets_list') }}">Bets</a>
     <a href="{{ url_for('bets_new') }}" class="new-bet">+ New Bet</a>
     <a href="{{ url_for('bettors_page') }}">Bettors</a>

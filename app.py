@@ -83,6 +83,16 @@ def parse_optional_decimal(raw_value):
     return Decimal(raw_value)
 
 
+def parse_sport_filter(param_name, default):
+    raw = request.args.get(param_name, default)
+    return raw, (None if raw == "all" else raw)
+
+
+def parse_bet_type_filter(param_name):
+    raw = request.args.get(param_name, "all")
+    return raw, (None if raw == "all" else int(raw))
+
+
 def parse_legs_from_form(form):
     bettor_ids = form.getlist("leg_bettor_id")
     player_names = form.getlist("leg_player_name")
@@ -137,21 +147,39 @@ def register_routes(app):
             .all()
         )
 
-        def sport_filter(param_name, default):
-            raw = request.args.get(param_name, default)
-            return raw, (None if raw == "all" else raw)
+        bs_sport_raw, bs_sport = parse_sport_filter("bs_sport", "all")
+        bs_bet_type_raw, bs_bet_type_id = parse_bet_type_filter("bs_bet_type")
+        pl_sport_raw, pl_sport = parse_sport_filter("pl_sport", "NFL")
+        pc_sport_raw, pc_sport = parse_sport_filter("pc_sport", "NFL")
 
-        def bet_type_filter(param_name):
-            raw = request.args.get(param_name, "all")
-            return raw, (None if raw == "all" else int(raw))
+        return render_template(
+            "dashboard.html",
+            pending_bets=pending_bets,
+            sports=analytics.distinct_sports(),
+            bet_types=BetType.query.order_by(BetType.name).all(),
+            group_players=analytics.player_leaderboard(is_group_bet=True, sport=pl_sport),
+            group_bettors=analytics.bettor_scoreboard(
+                is_group_bet=True, sport=bs_sport, bet_type_id=bs_bet_type_id
+            ),
+            group_categories=analytics.category_breakdown(is_group_bet=True, sport=pc_sport),
+            selected={
+                "bs_sport": bs_sport_raw,
+                "bs_bet_type": bs_bet_type_raw,
+                "pl_sport": pl_sport_raw,
+                "pc_sport": pc_sport_raw,
+            },
+        )
 
-        bs_sport_raw, bs_sport = sport_filter("bs_sport", "all")
-        bs_bet_type_raw, bs_bet_type_id = bet_type_filter("bs_bet_type")
-        pl_sport_raw, pl_sport = sport_filter("pl_sport", "NFL")
-        pc_sport_raw, pc_sport = sport_filter("pc_sport", "NFL")
-        roi_sport_raw, roi_sport = sport_filter("roi_sport", "all")
-        roi_bet_type_raw, roi_bet_type_id = bet_type_filter("roi_bet_type")
-        bc_sport_raw, bc_sport = sport_filter("bc_sport", "all")
+    @app.get("/performance")
+    def performance():
+        """My Overall Performance, split off the public dashboard onto its
+        own route specifically so it falls under the password gate --
+        real money and personal picking-record data, not something to
+        show friends along with the shared dashboard link.
+        """
+        roi_sport_raw, roi_sport = parse_sport_filter("roi_sport", "all")
+        roi_bet_type_raw, roi_bet_type_id = parse_bet_type_filter("roi_bet_type")
+        bc_sport_raw, bc_sport = parse_sport_filter("bc_sport", "all")
 
         bettors = Bettor.query.order_by(Bettor.name).all()
         bc_bettor_code = request.args.get("bc_bettor", "ME")
@@ -164,16 +192,10 @@ def register_routes(app):
         )
 
         return render_template(
-            "dashboard.html",
-            pending_bets=pending_bets,
+            "performance.html",
             sports=analytics.distinct_sports(),
             bet_types=BetType.query.order_by(BetType.name).all(),
             bettors=bettors,
-            group_players=analytics.player_leaderboard(is_group_bet=True, sport=pl_sport),
-            group_bettors=analytics.bettor_scoreboard(
-                is_group_bet=True, sport=bs_sport, bet_type_id=bs_bet_type_id
-            ),
-            group_categories=analytics.category_breakdown(is_group_bet=True, sport=pc_sport),
             my_categories=analytics.bet_category_breakdown_by_bettor(
                 bc_bettor.id, sport=bc_sport
             )
@@ -182,10 +204,6 @@ def register_routes(app):
             my_roi=my_roi,
             my_roi_total=analytics.roi_total(my_roi),
             selected={
-                "bs_sport": bs_sport_raw,
-                "bs_bet_type": bs_bet_type_raw,
-                "pl_sport": pl_sport_raw,
-                "pc_sport": pc_sport_raw,
                 "roi_sport": roi_sport_raw,
                 "roi_bet_type": roi_bet_type_raw,
                 "bc_sport": bc_sport_raw,

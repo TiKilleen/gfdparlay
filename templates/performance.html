@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}My Performance{% endblock %}
+{% block content %}
+
+<h1>My Overall Performance</h1>
+<p style="color: var(--muted)">Everything you're financially on the hook for -- solo bets plus every group parlay (the whole parlay's stake and profit are yours, not split), and your own leg-picking record within those group parlays.</p>
+
+<form method="get" action="{{ url_for('performance') }}">
+
+<div class="panel">
+  <div class="panel-header">
+    <h3>ROI by Sport / Bet Type</h3>
+    <div class="filter-controls">
+      <label>Sport
+        <select name="roi_sport" class="filter-select" onchange="this.form.submit()">
+          <option value="all" {{ 'selected' if selected.roi_sport == 'all' }}>All</option>
+          {% for s in sports %}
+          <option value="{{ s }}" {{ 'selected' if selected.roi_sport == s }}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Bet Type
+        <select name="roi_bet_type" class="filter-select" onchange="this.form.submit()">
+          <option value="all" {{ 'selected' if selected.roi_bet_type == 'all' }}>All</option>
+          {% for bt in bet_types %}
+          <option value="{{ bt.id }}" {{ 'selected' if selected.roi_bet_type == bt.id|string }}>{{ bt.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
+  </div>
+  <table>
+    <tr><th>Sport</th><th>Bet Type</th><th>Risk</th><th>Profit</th><th>ROI</th></tr>
+    {% for row in my_roi %}
+    <tr>
+      <td>{{ row.sport }}</td>
+      <td>{{ row.bet_type }}</td>
+      <td>{{ row.risk|money }}</td>
+      <td class="{{ 'win' if row.profit > 0 else ('loss' if row.profit < 0 else '') }}">{{ row.profit|money }}</td>
+      <td>{{ row.roi if row.roi is not none else "-" }}%</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" style="color: var(--muted)">No graded bets yet.</td></tr>
+    {% endfor %}
+    {% if my_roi %}
+    <tr style="font-weight:600">
+      <td colspan="2">Total</td>
+      <td>{{ my_roi_total.risk|money }}</td>
+      <td class="{{ 'win' if my_roi_total.profit > 0 else ('loss' if my_roi_total.profit < 0 else '') }}">{{ my_roi_total.profit|money }}</td>
+      <td>{{ my_roi_total.roi if my_roi_total.roi is not none else "-" }}%</td>
+    </tr>
+    {% endif %}
+  </table>
+</div>
+
+<div class="panel">
+  <div class="panel-header">
+    <h3>Bet Category Win % By Bettor</h3>
+    <div class="filter-controls">
+      <label>Bettor
+        <select name="bc_bettor" class="filter-select" onchange="this.form.submit()">
+          {% for b in bettors %}
+          <option value="{{ b.short_code }}" {{ 'selected' if selected.bc_bettor == b.short_code }}>{{ b.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Sport
+        <select name="bc_sport" class="filter-select" onchange="this.form.submit()">
+          <option value="all" {{ 'selected' if selected.bc_sport == 'all' }}>All</option>
+          {% for s in sports %}
+          <option value="{{ s }}" {{ 'selected' if selected.bc_sport == s }}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
+  </div>
+  <table>
+    <tr><th>Category</th><th>W</th><th>L</th><th>Win%</th></tr>
+    {% for row in my_categories %}
+    <tr>
+      <td>{{ row.name }}</td>
+      <td>{{ row.wins }}</td>
+      <td>{{ row.losses }}</td>
+      <td>{{ row.win_pct if row.win_pct is not none else "-" }}%</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" style="color: var(--muted)">No graded picks yet.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+
+</form>
+
+{% endblock %}
